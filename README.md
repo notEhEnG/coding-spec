@@ -148,7 +148,3 @@ The skill uses conservative scoring so weak signals such as filenames alone do n
 - Add adapters for PRD templates, ADRs, and issue-based specs.
 - Add test-fixture repos for regression checks.
 - Add stricter evidence scoring for security and performance requirements.
-
-## License
-
-Add your preferred license before publishing the repository.
