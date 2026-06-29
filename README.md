@@ -21,6 +21,7 @@ coding-spec/
 ├── SKILL.md
 ├── README.md
 ├── INSTALL.md
+├── Checklist.md
 ├── references/
 │   ├── sdd-patterns.md
 │   └── drift-heuristics.md
