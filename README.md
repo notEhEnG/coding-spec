@@ -21,7 +21,6 @@ coding-spec/
 ├── SKILL.md
 ├── README.md
 ├── INSTALL.md
-├── Checklist.md
 ├── references/
 │   ├── sdd-patterns.md
 │   └── drift-heuristics.md
@@ -85,9 +84,9 @@ Codex should place the folder in the skill directory your environment watches, k
 
 Claude Code skill docs describe `name` and `description` as core skill metadata, and cross-tool explainers note that the skill name is used as the direct invocation identifier in slash-style workflows.[cite:27][cite:60]
 
-### Prompt sheet
+### Without slash commands
 
-Use `Checklist.md` as the canonical launcher prompt sheet when slash commands are unavailable or when you want a phase-gated workflow that works across Claude Code, Codex wrappers, and Antigravity-style setups.
+When slash commands are unavailable, ask your agent to follow the five-phase workflow in `SKILL.md`. See `INSTALL.md` for host-specific install paths and trigger phrases.
 
 ### Good trigger phrases
 
