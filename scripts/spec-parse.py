@@ -1,5 +1,29 @@
 #!/usr/bin/env python3
-"""Parse Markdown-style specs into a structured requirement checklist."""
+"""Parse Markdown-style specs into a structured requirement checklist.
+
+Output envelope (stdout or ``--output`` JSON file):
+
+{
+  "source": "<path-to-spec>",
+  "parsed_at": "<ISO-8601 UTC timestamp>",
+  "groups": ["<heading path>", "..."],
+  "requirements": [
+    {
+      "id": "<group-slug>-<ordinal>",
+      "title": "<short requirement title>",
+      "group": "<heading path>",
+      "source_excerpt": "<verbatim source text>",
+      "acceptance_signals": ["<cue-derived signal>", "..."],
+      "priority": "unknown|high|medium|low",
+      "type": "functional|ambiguous|non_goal"
+    }
+  ]
+}
+
+Each object in ``requirements`` matches the ingest schema in
+``references/sdd-patterns.md``. This envelope is Phase 1 ingest output only.
+Phase 4 reconciliation produces a separate classified checklist artifact.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +33,7 @@ import re
 import sys
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+from enum import StrEnum
 from pathlib import Path
 from typing import Iterable
 
@@ -25,34 +50,13 @@ NON_GOAL_SECTION_RE = re.compile(
     r"(?i)\b(non-?goals?|out of scope|not in scope|exclusions?)\b"
 )
 
-REQUIREMENT_VERBS = (
-    "must",
-    "shall",
-    "should",
-    "will",
-    "need to",
-    "needs to",
-    "required to",
-    "prevents",
-    "prevent",
-    "allows",
-    "allow",
-    "rejects",
-    "reject",
-    "records",
-    "record",
-    "displays",
-    "display",
-    "supports",
-    "support",
-    "enables",
-    "enable",
-    "ensures",
-    "ensure",
-    "validates",
-    "validate",
-    "blocks",
-    "block",
+REQUIREMENT_VERB_RE = re.compile(
+    r"(?i)\b("
+    r"must|shall|should|will|"
+    r"need to|needs to|required to|"
+    r"prevents?|allows?|rejects?|records?|displays?|"
+    r"supports?|enables?|ensures?|validates?|blocks?"
+    r")\b"
 )
 
 CAPABILITY_HEADING_RE = re.compile(
@@ -67,6 +71,7 @@ IMPERATIVE_HEADING_RE = re.compile(
 
 PRIORITY_RE = re.compile(r"(?i)\b(P0|P1|P2|P3|high|medium|low|critical)\b")
 COMPOUND_AND_RE = re.compile(r"\s+and\s+", re.IGNORECASE)
+MODAL_FRAGMENT_RE = re.compile(r"(?i)^(must|shall|should|will)\b")
 
 SIGNAL_CUES = (
     ("duplicate", "duplicate case handled"),
@@ -85,6 +90,19 @@ SIGNAL_CUES = (
 )
 
 
+class SectionKind(StrEnum):
+    NORMAL = "normal"
+    ACCEPTANCE = "acceptance"
+    NON_GOAL = "non_goal"
+
+
+class CandidateOrigin(StrEnum):
+    HEADING = "heading"
+    CHECKLIST = "checklist"
+    BULLET = "bullet"
+    NARRATIVE = "narrative"
+
+
 @dataclass
 class Requirement:
     id: str
@@ -94,6 +112,14 @@ class Requirement:
     acceptance_signals: list[str] = field(default_factory=list)
     priority: str = "unknown"
     type: str = "functional"
+
+
+@dataclass
+class RequirementCandidate:
+    text: str
+    group: str
+    origin: CandidateOrigin
+    section: SectionKind
 
 
 @dataclass
@@ -115,6 +141,10 @@ def normalize_whitespace(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def contains_requirement_verb(text: str) -> bool:
+    return bool(REQUIREMENT_VERB_RE.search(text))
+
+
 def split_compound(text: str) -> list[str]:
     text = normalize_whitespace(text)
     if ";" in text:
@@ -125,7 +155,7 @@ def split_compound(text: str) -> list[str]:
         splittable = [
             part
             for part in and_parts
-            if looks_like_requirement_sentence(part) or len(part.split()) >= 4
+            if contains_requirement_verb(part) or len(part.split()) >= 4
         ]
         if len(splittable) >= 2:
             return splittable
@@ -148,8 +178,7 @@ def detect_priority(text: str) -> str:
 
 
 def looks_like_requirement_sentence(text: str) -> bool:
-    lowered = text.lower()
-    if any(verb in lowered for verb in REQUIREMENT_VERBS):
+    if contains_requirement_verb(text):
         return True
     if re.search(r"(?i)\b(user|system|api|service)\b", text) and re.search(
         r"(?i)\b(can|cannot|can't|able to)\b", text
@@ -164,29 +193,21 @@ def heading_is_requirement(text: str) -> bool:
     return bool(IMPERATIVE_HEADING_RE.match(text))
 
 
-def infer_requirement_type(text: str, *, in_non_goal_section: bool) -> str:
-    if in_non_goal_section:
+def infer_requirement_type(text: str, *, section: SectionKind) -> str:
+    if section == SectionKind.NON_GOAL:
         return "non_goal"
+
     lowered = text.lower()
     aspirational = (
         "nice to have" in lowered
         or "ideally" in lowered
         or "consider" in lowered
-        or "may " in lowered
+        or re.search(r"\bmay\b", lowered)
     )
-    measurable = any(
-        cue in lowered
-        for cue in (
-            "must",
-            "shall",
-            "should",
-            "reject",
-            "prevent",
-            "validate",
-            "within",
-            "less than",
-            "at least",
-            "no more than",
+    measurable = bool(
+        re.search(
+            r"(?i)\b(must|shall|should|reject|prevent|validate|within|less than|at least|no more than)\b",
+            text,
         )
     )
     if aspirational and not measurable:
@@ -198,26 +219,19 @@ def derive_acceptance_signals(text: str) -> list[str]:
     lowered = text.lower()
     signals: list[str] = []
     for cue, signal in SIGNAL_CUES:
-        if cue in lowered and signal not in signals:
+        if re.search(rf"\b{re.escape(cue)}\b", lowered) and signal not in signals:
             signals.append(signal)
-    if looks_like_requirement_sentence(text):
-        excerpt = normalize_whitespace(text)
-        if len(excerpt) <= 120:
-            summary = excerpt
-        else:
-            summary = excerpt[:117].rstrip() + "..."
-        if summary not in signals:
-            signals.append(summary)
     return signals[:5]
 
 
 def make_title(text: str) -> str:
     text = normalize_whitespace(text)
-    text = re.sub(r"^The system\s+", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"^Users?\s+", "User ", text, flags=re.IGNORECASE)
-    if len(text) <= 120:
-        return text
-    return text[:117].rstrip() + "..."
+    stripped = re.sub(r"^The system\s+", "", text, flags=re.IGNORECASE)
+    stripped = re.sub(r"^Users?\s+", "User ", stripped, flags=re.IGNORECASE)
+    candidate = text if MODAL_FRAGMENT_RE.match(stripped) else stripped
+    if len(candidate) <= 120:
+        return candidate
+    return candidate[:117].rstrip() + "..."
 
 
 def current_group(heading_stack: list[tuple[int, str]]) -> str:
@@ -232,46 +246,72 @@ def allocate_id(group_path: str, counters: dict[str, int]) -> str:
     return f"{base}-{counters[base]:02d}"
 
 
-def add_requirement(
-    requirements: list[Requirement],
-    counters: dict[str, int],
-    *,
-    group: str,
-    text: str,
-    in_non_goal_section: bool,
-    force: bool = False,
-) -> None:
-    clauses = (
-        [normalize_whitespace(text)]
-        if force
-        else split_compound(text)
+def section_kind_for_heading(title: str) -> SectionKind:
+    if ACCEPTANCE_SECTION_RE.search(title):
+        return SectionKind.ACCEPTANCE
+    if NON_GOAL_SECTION_RE.search(title):
+        return SectionKind.NON_GOAL
+    return SectionKind.NORMAL
+
+
+def candidate_is_atomic(candidate: RequirementCandidate) -> bool:
+    if candidate.origin in (CandidateOrigin.HEADING, CandidateOrigin.CHECKLIST):
+        return True
+    return candidate.origin == CandidateOrigin.BULLET and candidate.section in (
+        SectionKind.ACCEPTANCE,
+        SectionKind.NON_GOAL,
     )
-    for clause in clauses:
-        if not force and not looks_like_requirement_sentence(clause):
-            if not heading_is_requirement(clause):
+
+
+def should_emit_clause(candidate: RequirementCandidate, clause: str) -> bool:
+    if candidate.origin in (CandidateOrigin.HEADING, CandidateOrigin.CHECKLIST):
+        return True
+    if candidate.origin == CandidateOrigin.BULLET and candidate.section in (
+        SectionKind.ACCEPTANCE,
+        SectionKind.NON_GOAL,
+    ):
+        return True
+    return looks_like_requirement_sentence(clause) or heading_is_requirement(clause)
+
+
+def clauses_for_candidate(candidate: RequirementCandidate) -> list[str]:
+    text = normalize_whitespace(candidate.text)
+    if candidate_is_atomic(candidate):
+        return [text]
+    return split_compound(text)
+
+
+def materialize_candidates(
+    candidates: Iterable[RequirementCandidate],
+) -> list[Requirement]:
+    requirements: list[Requirement] = []
+    counters: dict[str, int] = {}
+
+    for candidate in candidates:
+        for clause in clauses_for_candidate(candidate):
+            if not should_emit_clause(candidate, clause):
                 continue
-        req_id = allocate_id(group, counters)
-        requirements.append(
-            Requirement(
-                id=req_id,
-                title=make_title(clause),
-                group=group,
-                source_excerpt=clause,
-                acceptance_signals=derive_acceptance_signals(clause),
-                priority=detect_priority(clause),
-                type=infer_requirement_type(clause, in_non_goal_section=in_non_goal_section),
+            requirements.append(
+                Requirement(
+                    id=allocate_id(candidate.group, counters),
+                    title=make_title(clause),
+                    group=candidate.group,
+                    source_excerpt=clause,
+                    acceptance_signals=derive_acceptance_signals(clause),
+                    priority=detect_priority(clause),
+                    type=infer_requirement_type(clause, section=candidate.section),
+                )
             )
-        )
+
+    return requirements
 
 
 def parse_markdown(text: str, source: str) -> ParseResult:
     heading_stack: list[tuple[int, str]] = []
     groups: list[str] = []
-    requirements: list[Requirement] = []
-    counters: dict[str, int] = {}
+    candidates: list[RequirementCandidate] = []
+    section = SectionKind.NORMAL
     in_code_fence = False
-    in_acceptance_section = False
-    in_non_goal_section = False
     paragraph_lines: list[str] = []
 
     def flush_paragraph() -> None:
@@ -280,14 +320,14 @@ def parse_markdown(text: str, source: str) -> ParseResult:
             return
         paragraph = normalize_whitespace(" ".join(paragraph_lines))
         paragraph_lines = []
-        if looks_like_requirement_sentence(paragraph):
-            add_requirement(
-                requirements,
-                counters,
-                group=current_group(heading_stack),
+        candidates.append(
+            RequirementCandidate(
                 text=paragraph,
-                in_non_goal_section=in_non_goal_section,
+                group=current_group(heading_stack),
+                origin=CandidateOrigin.NARRATIVE,
+                section=section,
             )
+        )
 
     for raw_line in text.splitlines():
         line = raw_line.rstrip()
@@ -311,17 +351,16 @@ def parse_markdown(text: str, source: str) -> ParseResult:
             if group not in groups:
                 groups.append(group)
 
-            in_acceptance_section = bool(ACCEPTANCE_SECTION_RE.search(title))
-            in_non_goal_section = bool(NON_GOAL_SECTION_RE.search(title))
+            section = section_kind_for_heading(title)
 
             if heading_is_requirement(title):
-                add_requirement(
-                    requirements,
-                    counters,
-                    group=group,
-                    text=title,
-                    in_non_goal_section=in_non_goal_section,
-                    force=True,
+                candidates.append(
+                    RequirementCandidate(
+                        text=title,
+                        group=group,
+                        origin=CandidateOrigin.HEADING,
+                        section=section,
+                    )
                 )
             continue
 
@@ -332,27 +371,26 @@ def parse_markdown(text: str, source: str) -> ParseResult:
         checklist_match = CHECKLIST_RE.match(line)
         if checklist_match:
             flush_paragraph()
-            add_requirement(
-                requirements,
-                counters,
-                group=current_group(heading_stack),
-                text=checklist_match.group(1),
-                in_non_goal_section=in_non_goal_section,
-                force=True,
+            candidates.append(
+                RequirementCandidate(
+                    text=checklist_match.group(1),
+                    group=current_group(heading_stack),
+                    origin=CandidateOrigin.CHECKLIST,
+                    section=section,
+                )
             )
             continue
 
         bullet_match = BULLET_RE.match(line) or NUMBERED_RE.match(line)
         if bullet_match:
             flush_paragraph()
-            bullet_text = bullet_match.group(1)
-            add_requirement(
-                requirements,
-                counters,
-                group=current_group(heading_stack),
-                text=bullet_text,
-                in_non_goal_section=in_non_goal_section or in_acceptance_section,
-                force=in_acceptance_section or in_non_goal_section,
+            candidates.append(
+                RequirementCandidate(
+                    text=bullet_match.group(1),
+                    group=current_group(heading_stack),
+                    origin=CandidateOrigin.BULLET,
+                    section=section,
+                )
             )
             continue
 
@@ -364,7 +402,7 @@ def parse_markdown(text: str, source: str) -> ParseResult:
         source=source,
         parsed_at=datetime.now(timezone.utc).isoformat(),
         groups=groups,
-        requirements=requirements,
+        requirements=materialize_candidates(candidates),
     )
 
 

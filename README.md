@@ -35,27 +35,59 @@ Each skill is typically organized as a folder containing `SKILL.md` plus optiona
 
 ### Claude Code
 
-Copy the folder into `.claude/skills/coding-spec/` so the main file ends up at `.claude/skills/coding-spec/SKILL.md`. Claude Code documents skills as reusable extensions defined by `SKILL.md`, and community guides describe them as directly invocable slash commands using the skill name.[cite:27][cite:50]
+**Easiest install:** open Claude Code in your project and paste the repo link. Claude can clone or copy the skill for you:
+
+```text
+Hey Claude, help me install this skill https://github.com/notEhEnG/coding-spec
+```
+
+Claude should place the package at `.claude/skills/coding-spec/SKILL.md` so you can invoke it as `/coding-spec`.
+
+**Manual install:** copy the folder into `.claude/skills/coding-spec/` so the main file ends up at `.claude/skills/coding-spec/SKILL.md`. Claude Code documents skills as reusable extensions defined by `SKILL.md`, and community guides describe them as directly invocable slash commands using the skill name.[cite:27][cite:50]
 
 ### Antigravity IDE
 
-Copy the folder into `.antigravity/skills/coding-spec/`. Antigravity guides describe `.antigravity/skills/` as the project-level location for portable `SKILL.md` skills, with the same format reused across compatible agent tools.[cite:20]
+**Easiest install:** open Antigravity in your project and paste the repo link. The agent can clone or copy the skill for you:
+
+```text
+Hey Antigravity, help me install this skill https://github.com/notEhEnG/coding-spec
+```
+
+Antigravity should place the package at `.antigravity/skills/coding-spec/SKILL.md` so you can invoke it as `/coding-spec` or assign it to an agent in Manager View.
+
+**Manual install:** copy the folder into `.antigravity/skills/coding-spec/`. Antigravity guides describe `.antigravity/skills/` as the project-level location for portable `SKILL.md` skills, with the same format reused across compatible agent tools.[cite:20]
 
 ### Codex-compatible loaders
 
-Place the same folder into the skill directory used by your Codex-compatible wrapper or launcher, keeping the directory name `coding-spec` unchanged so the command identity remains stable across tools.[cite:22]
+**Easiest install:** open your Codex-compatible agent in the project and paste the repo link. The agent can clone or copy the skill for you:
+
+```text
+Hey Codex, help me install this skill https://github.com/notEhEnG/coding-spec
+```
+
+Codex should place the folder in the skill directory your environment watches, keeping the directory name `coding-spec` unchanged so `/coding-spec` remains stable across tools.
+
+**Manual install:** place the same folder into the skill directory used by your Codex-compatible wrapper or launcher, keeping the directory name `coding-spec` unchanged so the command identity remains stable across tools.[cite:22]
 
 ## Usage
 
 ### Explicit commands
 
 ```bash
+/coding-spec phase-1
 /coding-spec docs/prd.md
 /coding-spec specs/export-flow.md
+/coding-spec audit docs/prd.md
+/coding-spec patch docs/prd.md
 /coding-spec reverse-spec
+/coding-spec release-check
 ```
 
 Claude Code skill docs describe `name` and `description` as core skill metadata, and cross-tool explainers note that the skill name is used as the direct invocation identifier in slash-style workflows.[cite:27][cite:60]
+
+### Prompt sheet
+
+Use `Checklist.md` as the canonical launcher prompt sheet when slash commands are unavailable or when you want a phase-gated workflow that works across Claude Code, Codex wrappers, and Antigravity-style setups.
 
 ### Good trigger phrases
 
@@ -117,3 +149,7 @@ The skill uses conservative scoring so weak signals such as filenames alone do n
 - Add adapters for PRD templates, ADRs, and issue-based specs.
 - Add test-fixture repos for regression checks.
 - Add stricter evidence scoring for security and performance requirements.
+
+## License
+
+Add your preferred license before publishing the repository.

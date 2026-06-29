@@ -1,7 +1,7 @@
 ---
 name: coding-spec
-description: Verify spec-to-code alignment, detect drift after implementation, and propose living spec updates. Use when the user asks to check spec drift, validate an implementation against a spec, sync a living document, generate a spec from code, or ask whether a feature is actually done.
-when_to_use: Trigger phrases include "check spec drift", "are we on track", "validate my implementation", "update the spec", "is feature X done?", "sync the living doc", and "generate a spec from the code". Best for repositories that use spec-driven development, task plans, PRDs, ADRs, or acceptance-criteria documents.
+description: Verify spec-to-code alignment, detect drift after implementation, propose living spec updates, and audit the skill package itself. Use when the user asks to check spec drift, validate an implementation against a spec, sync a living document, generate a spec from code, review packaging and triggerability, or ask whether a feature is actually done.
+when_to_use: Trigger phrases include "check spec drift", "are we on track", "validate my implementation", "update the spec", "is feature X done?", "sync the living doc", "generate a spec from the code", and "release check". Best for repositories that use spec-driven development, task plans, PRDs, ADRs, acceptance-criteria documents, and portable skill bundles.
 argument-hint: [spec-path-or-mode]
 arguments: [target]
 disable-model-invocation: false
@@ -15,10 +15,15 @@ Close the spec-driven development loop by verifying whether the implementation s
 ## Invocation contract
 
 Interpret `$target` using these rules:
+- If it is `phase-1`, inspect the package files only and stop after ingest.
+- If it is `release-check`, review packaging, prompts, install instructions, and host triggerability.
 - If it is a readable file path, treat it as the primary spec.
 - If it is `reverse-spec`, infer a spec from the current codebase and docs.
+- If it starts with `audit `, treat the remainder as the primary spec path.
+- If it starts with `patch `, treat the remainder as the primary spec path and propose spec updates without rewriting the source file.
 - If it is empty, search for the best candidate spec in `spec/`, `docs/`, `planning/`, `.claude/`, and repository root.
 - If multiple candidate specs exist, present the top candidates and ask for confirmation before final classification.
+- If none of the above match, treat the value as a prompt label for a documented launcher flow and report the closest supported mode.
 
 ## Output contract
 
@@ -47,6 +52,30 @@ Never upgrade an item to **Aligned** on a single weak signal such as a filename 
 2. Load `${CLAUDE_SKILL_DIR}/references/sdd-patterns.md` for common SDD document structures.
 3. Run `python ${CLAUDE_SKILL_DIR}/scripts/spec-parse.py "$target"` when a concrete spec path is available. If no path is available, identify candidate spec files first.
 4. Normalize the spec into a requirement checklist with stable IDs, titles, source excerpts, and acceptance signals.
+
+`spec-parse.py` emits Phase 1 ingest JSON with this envelope:
+
+```json
+{
+  "source": "path/to/spec.md",
+  "parsed_at": "2026-06-29T14:21:53.527889+00:00",
+  "groups": ["Authentication / Invitations"],
+  "requirements": [
+    {
+      "id": "authentication-invitations-01",
+      "title": "Block duplicate invitations",
+      "group": "Authentication / Invitations",
+      "source_excerpt": "The system must prevent sending duplicate invitations...",
+      "acceptance_signals": ["duplicate case handled"],
+      "priority": "unknown",
+      "type": "functional"
+    }
+  ]
+}
+```
+
+Each object in `requirements` follows the ingest schema in `references/sdd-patterns.md`.
+Phase 4 reconciliation produces a separate classified checklist artifact with `status`, `confidence`, and evidence fields.
 
 ### Phase 2 — Fingerprint
 Build a fast codebase fingerprint before judging requirements.
@@ -121,8 +150,12 @@ If invoked as `/coding-spec reverse-spec` or with `$target = reverse-spec`:
 ## Suggested slash usage
 
 These explicit invocations should work in tools that map skill directories to slash commands:
+- `/coding-spec phase-1`
 - `/coding-spec path/to/spec.md`
+- `/coding-spec audit path/to/spec.md`
+- `/coding-spec patch path/to/spec.md`
 - `/coding-spec reverse-spec`
+- `/coding-spec release-check`
 - `/coding-spec docs/prd.md`
 
 ## Supporting files
@@ -130,4 +163,4 @@ These explicit invocations should work in tools that map skill directories to sl
 Use these references when needed:
 - `references/sdd-patterns.md` — common spec shapes and how to parse them.
 - `references/drift-heuristics.md` — concrete scoring rules for alignment and drift.
-- `scripts/spec-parse.py` — parser that converts a spec into structured JSON.
+- `scripts/spec-parse.py` — parser that converts a spec into Phase 1 ingest JSON (`source`, `parsed_at`, `groups`, `requirements[]`).

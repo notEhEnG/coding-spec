@@ -7,7 +7,8 @@ This package uses the portable `SKILL.md` format so the same core skill can be r
 Project install:
 1. Copy `coding-spec/` into `.claude/skills/`.
 2. Final path should be `.claude/skills/coding-spec/SKILL.md`.
-3. Invoke with `/coding-spec path/to/spec.md` or `/coding-spec reverse-spec`.
+3. Use `Checklist.md` as the launcher prompt sheet.
+4. Invoke with `/coding-spec path/to/spec.md` or `/coding-spec reverse-spec` if your Claude Code setup maps skills to slash commands.
 
 Why this works:
 - Claude Code supports `SKILL.md` skills.
@@ -19,7 +20,8 @@ Why this works:
 Recommended install:
 1. Copy `coding-spec/` into the skill directory your Codex environment watches.
 2. Preserve the folder name `coding-spec` so the slash command remains stable.
-3. Invoke it with `/coding-spec path/to/spec.md` when the environment exposes slash-style skill commands.
+3. Use `Checklist.md` as the canonical prompt sheet.
+4. Invoke it with `/coding-spec path/to/spec.md` only when your Codex wrapper exposes slash-style skill commands.
 
 Notes:
 - Codex ecosystem support is often implemented through the same open `SKILL.md` conventions rather than one single canonical path.
@@ -30,7 +32,8 @@ Notes:
 Project install:
 1. Copy `coding-spec/` into `.antigravity/skills/`.
 2. Final path should be `.antigravity/skills/coding-spec/SKILL.md`.
-3. Invoke with `/coding-spec path/to/spec.md` or assign the skill to a reviewer/architect agent in Manager View.
+3. Use `Checklist.md` as the canonical prompt sheet.
+4. Invoke with `/coding-spec path/to/spec.md` or assign the skill to a reviewer/architect agent in Manager View if your Antigravity setup exposes that mapping.
 
 Why this works:
 - Antigravity supports `SKILL.md` skills.
