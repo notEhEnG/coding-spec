@@ -2,13 +2,26 @@
 coding-spec/Checklist.md
 Checklist.md
 coding-spec-package.md
-.antigravity/
 
-# Legacy prototype sandbox
-phases/test_sandbox/
+# Local skill install copies and reference snapshots
+.antigravity/
+coding-spec/coding-spec-main-github/
+
+# Legacy prototype — superseded by root src/, templates/, docs/
+phases/
 
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+*.egg-info/
+.venv/
+venv/
+env/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
