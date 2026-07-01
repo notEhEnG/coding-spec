@@ -1,27 +1,39 @@
-# coding-spec
+# coding-spec (auditing skill)
 
-Portable `SKILL.md` workflow for spec drift detection, implementation verification, and living spec updates in spec-driven development. Claude Code supports extensible skills via `SKILL.md`, and Antigravity IDE uses the same skill format in `.antigravity/skills/`, which makes this package suitable for cross-tool agent workflows.[cite:27][cite:20]
+Portable `SKILL.md` workflow for spec drift detection, implementation verification, and living spec updates in spec-driven development.
 
-## Why it exists
+Claude Code, Antigravity IDE, and Codex-compatible loaders can all use this package when they support the `SKILL.md` skill format.
 
-Most spec-driven workflows stop at plan and implement, but teams still need a practical way to check whether the code actually matches the spec after changes land. `coding-spec` adds that missing verification layer by reading a spec, inspecting the codebase, classifying each requirement, and proposing controlled updates to keep documentation current.[cite:27][cite:20]
+## Relationship to the toolkit
+
+This repository is a monorepo:
+
+| Package | Location | Purpose |
+|---|---|---|
+| **Toolkit CLI** | repo root (`bin/coding-spec`) | Scaffold specs and plans *before* coding |
+| **Auditing skill** | this folder (`coding-spec/`) | Verify code matches specs *after* coding |
+
+For toolkit quickstart, see the [root README](../README.md).
+
+## Why this skill exists
+
+Most spec-driven workflows stop at plan and implement. Teams still need a practical way to check whether the code actually matches the spec after changes land. This skill reads a spec, inspects the codebase, classifies each requirement, and proposes controlled updates to keep documentation current.
 
 ## What it does
 
-- Parses Markdown-style specs into a structured checklist with stable IDs.
+- Parses Markdown specs into a structured checklist with stable IDs.
 - Scans a repository for evidence across code, tests, schemas, configs, and docs.
 - Classifies each requirement as `Aligned`, `Partial`, `Drifted`, `Not Started`, or `Needs Review`.
 - Produces a report, machine-readable checklist, and proposed spec patch.
-- Supports explicit slash-style invocation such as `/coding-spec docs/prd.md` in compatible skill-driven agent tools.[cite:27][cite:20][cite:60]
+- Supports slash-style invocation such as `/coding-spec docs/prd.md` in compatible agent tools.
 
 ## Package contents
 
 ```text
 coding-spec/
-├── SKILL.md
+├── SKILL.md              # canonical launcher and workflow
 ├── README.md
 ├── INSTALL.md
-├── Checklist.md
 ├── LICENSE
 ├── references/
 │   ├── sdd-patterns.md
@@ -34,67 +46,49 @@ coding-spec/
         ├── checklist_atomic.md
         ├── compound_narrative.md
         ├── false_positive_willow.md
-        ├── nested_sections.md
         └── non_goal_section.md
 ```
 
-Each skill is typically organized as a folder containing `SKILL.md` plus optional `scripts/` and `references/`, which matches common Claude Code skill packaging patterns.[cite:27][cite:65]
-
 ## Install
 
-### Claude Code
+Copy this **`coding-spec/` subfolder** into your agent's skill directory. See [INSTALL.md](INSTALL.md) for host-specific paths.
 
-**Easiest install:** open Claude Code in your project and paste the repo link. Claude can clone or copy the skill for you:
+### Claude Code
 
 ```text
 Hey Claude, help me install this skill https://github.com/notEhEnG/coding-spec
 ```
 
-Claude should place the package at `.claude/skills/coding-spec/SKILL.md` so you can invoke it as `/coding-spec`.
-
-**Manual install:** copy the folder into `.claude/skills/coding-spec/` so the main file ends up at `.claude/skills/coding-spec/SKILL.md`. Claude Code documents skills as reusable extensions defined by `SKILL.md`, and community guides describe them as directly invocable slash commands using the skill name.[cite:27][cite:50]
+Manual target: `.claude/skills/coding-spec/SKILL.md`
 
 ### Antigravity IDE
-
-**Easiest install:** open Antigravity in your project and paste the repo link. The agent can clone or copy the skill for you:
 
 ```text
 Hey Antigravity, help me install this skill https://github.com/notEhEnG/coding-spec
 ```
 
-Antigravity should place the package at `.antigravity/skills/coding-spec/SKILL.md` so you can invoke it as `/coding-spec` or assign it to an agent in Manager View.
-
-**Manual install:** copy the folder into `.antigravity/skills/coding-spec/`. Antigravity guides describe `.antigravity/skills/` as the project-level location for portable `SKILL.md` skills, with the same format reused across compatible agent tools.[cite:20]
+Manual target: `.antigravity/skills/coding-spec/SKILL.md`
 
 ### Codex-compatible loaders
-
-**Easiest install:** open your Codex-compatible agent in the project and paste the repo link. The agent can clone or copy the skill for you:
 
 ```text
 Hey Codex, help me install this skill https://github.com/notEhEnG/coding-spec
 ```
 
-Codex should place the folder in the skill directory your environment watches, keeping the directory name `coding-spec` unchanged so `/coding-spec` remains stable across tools.
-
-**Manual install:** place the same folder into the skill directory used by your Codex-compatible wrapper or launcher, keeping the directory name `coding-spec` unchanged so the command identity remains stable across tools.[cite:22]
+Manual target: `<your-skill-dir>/coding-spec/SKILL.md` — preserve the folder name `coding-spec`.
 
 ## Usage
 
-### Explicit commands
+`SKILL.md` is the single source of truth for commands and workflow. Common invocations:
 
-Refer to [Checklist.md](file:///home/bryan04/gemini/agy/coding-projects/oss/coding-spec/coding-spec/Checklist.md) for the single source of truth command registry:
+- `/coding-spec phase-1` — ingest and normalize only
+- `/coding-spec path/to/spec.md` — full audit against a spec file
+- `/coding-spec audit path/to/spec.md` — explicit audit mode
+- `/coding-spec patch path/to/spec.md` — propose spec updates without rewriting the source
+- `/coding-spec reverse-spec` — infer requirements from implementation
+- `/coding-spec release-check` — validate packaging and install instructions
 
-- `/coding-spec phase-1` — Ingest and normalize only.
-- `/coding-spec reverse-spec` — Infer requirements from implementation.
-- `/coding-spec audit <spec-path>` — Compare spec to code and generate the three output artifacts.
-- `/coding-spec patch <spec-path>` — Propose spec updates without rewriting the source spec.
-- `/coding-spec release-check` — Validate packaging, prompts, install instructions, and host triggerability.
-
-Claude Code skill docs describe `name` and `description` as core skill metadata, and cross-tool explainers note that the skill name is used as the direct invocation identifier in slash-style workflows.[cite:27][cite:60]
-
-### Without slash commands
-
-When slash commands are unavailable, ask your agent to follow the five-phase workflow in `SKILL.md`. See `INSTALL.md` for host-specific install paths and trigger phrases.
+When slash commands are unavailable, ask your agent to follow the five-phase workflow in `SKILL.md`.
 
 ### Good trigger phrases
 
@@ -108,29 +102,21 @@ When slash commands are unavailable, ask your agent to follow the five-phase wor
 
 ## Workflow
 
-`coding-spec` follows a five-phase workflow:
-
 1. **Ingest** — read the primary spec and normalize requirements.
 2. **Fingerprint** — inspect repo structure, code, tests, configs, and docs.
 3. **Match** — connect requirements to implementation evidence.
 4. **Classify** — score each requirement conservatively.
 5. **Reconcile** — generate a report and proposed spec updates.
 
-This structure is implemented in the shipped `SKILL.md`, `references/`, and parser script so the agent has both instructions and reusable heuristics in one portable package.[cite:27][cite:65]
-
 ## Output artifacts
 
-By default, the skill is designed to produce:
+By default, the skill produces:
 
 - `coding-spec-report.md`
 - `coding-spec-checklist.json`
 - `coding-spec-spec-patch.md`
 
-These outputs separate the human-readable audit, the structured machine-readable checklist, and the proposed documentation changes into distinct artifacts for review.[cite:27]
-
 ## Classification model
-
-Each requirement is assigned one of five states:
 
 | Status | Meaning |
 |---|---|
@@ -140,30 +126,10 @@ Each requirement is assigned one of five states:
 | `Not Started` | No meaningful implementation evidence was found. |
 | `Needs Review` | The requirement is too ambiguous or external to verify reliably. |
 
-The skill uses conservative scoring so weak signals such as filenames alone do not justify a strong alignment claim.[cite:27]
-
 ## Reverse-spec mode
 
-`/coding-spec reverse-spec` infers a draft living spec from the current codebase, tests, routes, schemas, and docs instead of starting from an existing spec file. This is useful when code exists but the original planning document is missing, stale, or incomplete.[cite:27]
+`/coding-spec reverse-spec` infers a draft living spec from the current codebase when the original planning document is missing, stale, or incomplete.
 
 ## Limitations
 
-`coding-spec` is a verification aid, not a formal proof system. It works best when the repository includes reasonably clear specs, tests, and implementation artifacts, and it should fall back to `Needs Review` when requirements are subjective, underspecified, or depend on systems outside the visible repository.[cite:27][cite:20]
-
-## Repository Status & Roadmap
-
-The repository contains two main parts:
-1. **Auditing Skill Package (`coding-spec/`)**: The active portable agent skill ready to be installed and run inside agent workflows.
-2. **Toolkit CLI Drafts (`phases/`)**: A prototype implementation of the toolkit CLI showcasing the completion of **Phase 1 (Make it real)** and **Phase 2 (Add trust)** of the product roadmap. It includes:
-   - CLI workspace setup and file generators (`init`, `spec`, `plan`).
-   - Project validation checks (`validate`).
-   - Heuristic code-compliance reviewer (`review`).
-   - Base markdown templates and demo feature walkthrough.
-   - CLI unit and template snapshot test suites.
-
-To test the CLI sandbox tools, run:
-```bash
-python3 phases/src/cli.py init --dir sandbox
-python3 phases/src/cli.py spec "Add Team Billing" --dir sandbox
-python3 phases/src/cli.py validate sandbox/docs/specs/add-team-billing.md
-```
+This is a verification aid, not a formal proof system. It works best when the repository includes clear specs, tests, and implementation artifacts, and falls back to `Needs Review` when requirements are subjective or depend on systems outside the visible repository.
