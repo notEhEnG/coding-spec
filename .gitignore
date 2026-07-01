@@ -1,0 +1,14 @@
+# Local operator prompt sheet (not published)
+coding-spec/Checklist.md
+Checklist.md
+coding-spec-package.md
+.antigravity/
+
+# Legacy prototype sandbox
+phases/test_sandbox/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/

@@ -1,0 +1,6 @@
+You are implementing a new feature. Read the spec and technical plan in docs/ before writing code.
+
+Spec: docs/specs/{feature-slug}.md
+Plan: docs/plans/{feature-slug}-plan.md
+
+Stay within acceptance criteria. Flag anything that conflicts with the non-goals section.
