@@ -40,12 +40,11 @@ def _extract_criteria(spec_text: str) -> list[str]:
     return criteria
 
 
-def _find_evidence(criterion: str, target_dir: Path, skip: set[Path]) -> list[str]:
-    keywords = [w.lower() for w in re.findall(r"\b\w{4,}\b", criterion)[:3]]
-    if not keywords or not target_dir.is_dir():
-        return []
-
-    matched = []
+def _collect_sources(target_dir: Path, skip: set[Path]) -> list[tuple[str, str]]:
+    """Read every candidate source file once, returning (name, lowercased text)."""
+    sources = []
+    if not target_dir.is_dir():
+        return sources
     for root, dirs, files in os.walk(target_dir):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not d.startswith(".")]
         for name in files:
@@ -55,12 +54,17 @@ def _find_evidence(criterion: str, target_dir: Path, skip: set[Path]) -> list[st
             if path.resolve() in skip:
                 continue
             try:
-                content = path.read_text(encoding="utf-8", errors="ignore").lower()
+                sources.append((name, path.read_text(encoding="utf-8", errors="ignore").lower()))
             except OSError:
                 continue
-            if all(keyword in content for keyword in keywords):
-                matched.append(name)
-    return matched
+    return sources
+
+
+def _find_evidence(criterion: str, sources: list[tuple[str, str]]) -> list[str]:
+    keywords = [w.lower() for w in re.findall(r"\b\w{4,}\b", criterion)[:3]]
+    if not keywords:
+        return []
+    return [name for name, content in sources if all(k in content for k in keywords)]
 
 
 def run_review(spec_file_path: str, target_dir_path: str | None) -> int:
@@ -89,8 +93,9 @@ def run_review(spec_file_path: str, target_dir_path: str | None) -> int:
     if not criteria:
         lines.append("- [ ] No explicit acceptance criteria were found in the spec file.")
     else:
+        sources = _collect_sources(target_dir, skip)
         for criterion in criteria:
-            matched = _find_evidence(criterion, target_dir, skip)
+            matched = _find_evidence(criterion, sources)
             status = "[x]" if matched else "[ ]"
             evidence = (
                 f" (evidence in: {', '.join(matched)})"

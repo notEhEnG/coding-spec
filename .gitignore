@@ -3,8 +3,9 @@ coding-spec/Checklist.md
 Checklist.md
 coding-spec-package.md
 
-# Local skill install copies and reference snapshots
+# Local agent tool config and skill install copies
 .antigravity/
+.claude/
 coding-spec/coding-spec-main-github/
 
 # Legacy prototype — superseded by root src/, templates/, docs/

@@ -12,7 +12,7 @@ NON_GOALS_RE = re.compile(
     r"(?i)^#+\s+(?:\d+\.\s+)?(?:non-?goals?|out\s+of\s+scope|exclusions?)"
 )
 TEST_RE = re.compile(
-    r"(?i)^#+\s+(?:\d+\.\s+)?(?:test\s+considerations?|testing|test\s+strategies?)"
+    r"(?i)^#+\s+(?:\d+\.\s+)?(?:test\s+considerations?|testing|test\s+(?:strateg(?:y|ies)|plan)|qa)"
 )
 HEADING_RE = re.compile(r"^#+\s+")
 LIST_ITEM_RE = re.compile(r"^(?:[-*]|\d+\.)\s+")
