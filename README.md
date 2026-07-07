@@ -16,6 +16,8 @@ AI coding tools are fast, but they produce uneven results when requirements are 
 - Scaffolds a markdown-first project workspace (`init`)
 - Generates a feature spec from a short prompt (`spec`)
 - Converts an approved spec into a technical plan (`plan`)
+- Checks a spec for completeness — acceptance criteria, tests, scope (`validate`)
+- Generates a review checklist that matches spec criteria to code evidence (`review`)
 - Ships canonical templates for specs, plans, tasks, and reviews
 - Includes a full end-to-end demo in `examples/feature-team-billing/`
 

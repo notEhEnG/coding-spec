@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""coding-spec CLI — Phase 1: init, spec, and plan."""
+"""coding-spec CLI — init, spec, plan, validate, and review."""
 
 import sys
 from pathlib import Path
@@ -8,7 +8,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.commands.init import run_init
 from src.commands.plan import run_plan
+from src.commands.review import run_review
 from src.commands.spec import run_spec
+from src.commands.validate import run_validate
 
 
 def main() -> int:
@@ -30,6 +32,17 @@ def main() -> int:
     parser_plan.add_argument("spec_file", help="Path to the approved spec file.")
     parser_plan.add_argument("--dir", help="Target directory.")
 
+    parser_validate = subparsers.add_parser(
+        "validate", help="Check a spec for completeness (acceptance criteria, tests, scope)."
+    )
+    parser_validate.add_argument("spec_file", help="Path to the spec file to validate.")
+
+    parser_review = subparsers.add_parser(
+        "review", help="Generate a review checklist comparing implementation to the spec."
+    )
+    parser_review.add_argument("spec_file", help="Path to the spec file.")
+    parser_review.add_argument("--dir", help="Target directory.")
+
     args = parser.parse_args()
 
     if args.command == "init":
@@ -38,6 +51,10 @@ def main() -> int:
         return run_spec(args.prompt, args.dir)
     if args.command == "plan":
         return run_plan(args.spec_file, args.dir)
+    if args.command == "validate":
+        return run_validate(args.spec_file)
+    if args.command == "review":
+        return run_review(args.spec_file, args.dir)
 
     return 1
 
