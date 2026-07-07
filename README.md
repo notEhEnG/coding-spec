@@ -27,12 +27,34 @@ AI coding tools are fast, but they produce uneven results when requirements are 
 # From the repository root
 chmod +x bin/coding-spec
 
-./bin/coding-spec init
-./bin/coding-spec spec "Add team billing"
-./bin/coding-spec plan docs/specs/add-team-billing.md
+./bin/coding-spec init                                        # scaffold the workspace
+./bin/coding-spec spec "Add team billing"                     # draft a spec from a prompt
+./bin/coding-spec validate docs/specs/add-team-billing.md     # gate the spec for completeness
+./bin/coding-spec plan docs/specs/add-team-billing.md         # turn the spec into a plan
+./bin/coding-spec review docs/specs/add-team-billing.md       # check code against the spec
 ```
 
-A new user can complete init → spec → plan in under ten minutes.
+A new user can complete init → spec → plan in under ten minutes; `validate` and `review` add a trust gate on either side of implementation.
+
+## Command reference
+
+| Command | Input | Produces / checks | Exit code |
+|---|---|---|---|
+| `init [--dir DIR]` | — | Creates `docs/`, `templates/`, `examples/`, `prompts/`, `src/`, `tests/` and copies the canonical templates. | `0` |
+| `spec "<prompt>" [--dir DIR]` | a short title | `docs/specs/<slug>.md` from the spec template. | `0` |
+| `validate <spec.md>` | a spec file | Static completeness check (see below). Prints errors/warnings. | `1` if any error, else `0` |
+| `plan <spec.md> [--dir DIR]` | an approved spec | `docs/plans/<slug>-plan.md` from the plan template. | `0` |
+| `review <spec.md> [--dir DIR]` | a spec file | `docs/plans/<slug>-review.md` — each acceptance criterion paired with matching code evidence found in the tree. | `0` |
+
+**What `validate` checks** (headings are matched case-insensitively and tolerate a numbered prefix such as `## 3. Acceptance Criteria`):
+
+- **Error** — no *Acceptance Criteria* section, or the section has no list items ("under-specified criteria").
+- **Error** — no *Test Considerations* / *Testing* / *Test Plan* / *QA* section.
+- **Warning** — no *Non-Goals* / *Out of Scope* section (recommended to prevent scope drift).
+
+Because `validate` returns a non-zero exit code on errors, you can wire it into a pre-commit hook or CI step to block specs that are not implementation-ready.
+
+**What `review` produces** — it extracts each acceptance criterion, then keyword-scans the repository's `.py`/`.md` files (skipping caches, VCS, and vendored dirs) for evidence, marking every criterion `[x]` (evidence found, with file names) or `[ ]` (none). Treat it as a heuristic aid for a human reviewer, not a proof of correctness.
 
 ## Agent skill (Claude Code, Antigravity, Codex)
 
@@ -105,6 +127,20 @@ coding-spec/                 # monorepo root
     └── scripts/
 ```
 
+## Project status & roadmap
+
+The toolkit is built in phases; each phase is only marked shipped once its commands and tests are on `main`.
+
+| Phase | Theme | Scope | Status |
+|---|---|---|---|
+| **Phase 1** | Make it real | `init`, `spec`, `plan`; canonical templates; end-to-end demo | ✅ Shipped |
+| **Phase 2** | Add trust | `validate` (spec completeness gate), `review` (spec-to-code checklist), snapshot tests | ✅ Shipped |
+| **Phase 3** | Automate | Agent export modes and CI integration (e.g. `validate` as a required check) | 🔜 Planned |
+
+**What you can do today (Phases 1–2):** scaffold a workspace, generate and refine a spec, gate it with `validate`, produce a technical plan, and audit the implementation against the spec with `review`. The separate [`coding-spec/`](coding-spec/) auditing skill adds deeper, agent-driven spec-drift detection on top of this.
+
+**Not yet available (Phase 3):** exporting plans/specs into tool-specific agent formats and native CI wiring — for now, call `validate` yourself in a hook or pipeline (it exits non-zero on incomplete specs).
+
 ## Example projects
 
 See [`examples/feature-team-billing/`](examples/feature-team-billing/) for a complete spec → plan → tasks → review walkthrough.
@@ -119,10 +155,14 @@ See [`examples/feature-team-billing/`](examples/feature-team-billing/) for a com
 ## Development
 
 ```bash
-python3 -m pytest tests/ -q
-python3 src/cli.py --help
-cd coding-spec && python3 -m unittest scripts/test_spec_parse.py -q
+python3 -m pytest tests/ -q                                   # toolkit CLI tests
+python3 src/cli.py --help                                     # list all subcommands
+cd coding-spec && python3 -m unittest scripts/test_spec_parse.py -q  # auditing skill parser tests
 ```
+
+- `tests/test_cli.py` covers the `init → spec → plan` flow plus `validate` (pass/fail) and `review` criterion extraction.
+- `tests/test_snapshot.py` guards the canonical templates against accidental drift.
+- The auditing skill ships its own parser unit tests under `coding-spec/scripts/`.
 
 ## License
 
