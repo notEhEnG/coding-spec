@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""coding-spec CLI — init, spec, plan, validate, review, export, ci."""
+"""coding-spec CLI — init, spec, plan, validate, review, export, ci, score, catalog."""
 
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from src.commands.catalog import run_catalog
 from src.commands.ci import run_ci
 from src.commands.export import FORMATS, run_export
 from src.commands.init import run_init
 from src.commands.plan import run_plan
 from src.commands.review import run_review
+from src.commands.score import run_score
 from src.commands.spec import run_spec
 from src.commands.validate import run_validate, run_validate_all
 
@@ -64,6 +66,17 @@ def main() -> int:
     )
     parser_ci.add_argument("--dir", help="Target directory.")
 
+    parser_score = subparsers.add_parser(
+        "score", help="Produce a spec-to-code health scorecard (completeness, coverage, artifacts)."
+    )
+    parser_score.add_argument("spec_file", help="Path to the spec file.")
+    parser_score.add_argument("--dir", help="Target directory.")
+
+    parser_catalog = subparsers.add_parser(
+        "catalog", help="Index every spec under docs/specs with its status and grade."
+    )
+    parser_catalog.add_argument("--dir", help="Target directory.")
+
     args = parser.parse_args()
 
     if args.command == "init":
@@ -84,6 +97,10 @@ def main() -> int:
         return run_export(args.spec_file, args.format, args.dir)
     if args.command == "ci":
         return run_ci(args.dir)
+    if args.command == "score":
+        return run_score(args.spec_file, args.dir)
+    if args.command == "catalog":
+        return run_catalog(args.dir)
 
     return 1
 

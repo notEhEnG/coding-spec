@@ -24,6 +24,8 @@ AI coding tools are fast, but they produce uneven results when requirements are 
 - Generates a review checklist that matches spec criteria to code evidence (`review`)
 - Bundles a spec and its plan/review into an agent-ready brief for Claude, Cursor, or AGENTS.md tools (`export`)
 - Generates a GitHub Actions workflow that runs the spec gate as a required check (`ci`)
+- Grades a feature's spec-to-code health as a single scorecard (`score`)
+- Indexes every spec with its status and grade in one portfolio view (`catalog`)
 - Ships canonical templates for specs, plans, tasks, and reviews
 - Includes a full end-to-end demo in `examples/feature-team-billing/`
 
@@ -39,6 +41,8 @@ chmod +x bin/coding-spec
 ./bin/coding-spec plan docs/specs/add-team-billing.md         # turn the spec into a plan
 ./bin/coding-spec review docs/specs/add-team-billing.md       # check code against the spec
 ./bin/coding-spec export docs/specs/add-team-billing.md --format claude  # bundle an agent brief
+./bin/coding-spec score docs/specs/add-team-billing.md        # grade spec-to-code health
+./bin/coding-spec catalog                                     # index every spec's status
 ./bin/coding-spec ci                                          # generate a CI spec gate
 ```
 
@@ -56,6 +60,8 @@ A new user can complete init → spec → plan in under ten minutes; `validate` 
 | `review <spec.md> [--dir DIR]` | a spec file | `docs/plans/<slug>-review.md` — each acceptance criterion paired with matching code evidence found in the tree. | `0` |
 | `export <spec.md> [--format F] [--dir DIR]` | a spec file | `docs/exports/<slug>.*` — the spec plus any plan/tasks/review bundled into one agent brief. `F` ∈ `markdown` (default), `claude`, `cursor`, `agents`. | `0` |
 | `ci [--dir DIR]` | — | `.github/workflows/coding-spec.yml` — a workflow running `validate --all` on push/PR. | `0` (or `1` if it already exists) |
+| `score <spec.md> [--dir DIR]` | a spec file | `docs/plans/<slug>-scorecard.md` — a graded scorecard (completeness + criteria coverage + artifacts). | `0` |
+| `catalog [--dir DIR]` | — | `docs/catalog.md` — a table of every spec with validation status, plan/review presence, coverage, and grade. | `0` |
 
 **What `validate` checks** (headings are matched case-insensitively and tolerate a numbered prefix such as `## 3. Acceptance Criteria`):
 
@@ -71,7 +77,7 @@ Because `validate` returns a non-zero exit code on errors, you can wire it into 
 
 Install the repository as a skill and the whole workflow becomes a slash command:
 `/coding-spec` drives **both** the toolkit (`init`, `spec`, `plan`, `validate`,
-`review`, `export`, `ci`) and the drift **auditor** (`audit`,
+`review`, `export`, `ci`, `score`, `catalog`) and the drift **auditor** (`audit`,
 `reverse-spec`, `patch`, `release-check`). The root [`SKILL.md`](SKILL.md) routes
 each call to the right half based on the first token.
 
@@ -159,13 +165,11 @@ The toolkit is built in phases; each phase is only marked shipped once its comma
 | **Phase 1** | Make it real | `init`, `spec`, `plan`; canonical templates; end-to-end demo | ✅ Shipped |
 | **Phase 2** | Add trust | `validate` (spec completeness gate), `review` (spec-to-code checklist), snapshot tests | ✅ Shipped |
 | **Phase 3** | Automate | `export` (agent brief modes), `validate --all` + `ci` (GitHub Actions spec gate) | ✅ Shipped |
-| **Phase 4** | Differentiate | `score` (spec-to-code scorecard) and `catalog` (portfolio index of all specs) | 🔜 Planned |
+| **Phase 4** | Differentiate | `score` (spec-to-code scorecard) and `catalog` (portfolio index of all specs) | ✅ Shipped |
 
-**What you can do today (Phases 1–3):** scaffold a workspace, generate and refine a spec, gate it with `validate` (single file or `--all`), produce a technical plan, audit the implementation with `review`, export the spec as an agent brief for Claude/Cursor/AGENTS.md tools, and wire a CI spec gate with `ci`. The separate [`coding-spec/`](coding-spec/) auditing skill adds deeper, agent-driven spec-drift detection on top of this.
+**What you can do today (Phases 1–4):** scaffold a workspace, generate and refine a spec, gate it with `validate` (single file or `--all`), produce a technical plan, audit the implementation with `review`, export the spec as an agent brief for Claude/Cursor/AGENTS.md tools, wire a CI spec gate with `ci`, grade a feature with `score`, and see every feature at a glance with `catalog`. The separate [`coding-spec/`](coding-spec/) auditing skill adds deeper, agent-driven spec-drift detection on top of this.
 
-**Not yet available (Phase 4):** a per-feature `score` scorecard and a repo-wide `catalog` index of every spec's status and grade.
-
-The `export` output is a heuristic aid for human judgement, not a proof of correctness.
+The `export`, `score`, and `catalog` outputs are heuristic aids for human judgement, not proofs of correctness.
 
 ## Example projects
 
@@ -188,6 +192,7 @@ cd coding-spec && python3 -m unittest scripts/test_spec_parse.py -q  # auditing 
 
 - `tests/test_cli.py` covers the `init → spec → plan` flow plus `validate` (pass/fail) and `review` criterion extraction.
 - `tests/test_phase3.py` covers `export` (all formats), `validate --all`, and `ci`.
+- `tests/test_phase4.py` covers `score` (scorecard + artifact rewards) and `catalog` (portfolio index).
 - `tests/test_snapshot.py` guards the canonical templates against accidental drift.
 - The auditing skill ships its own parser unit tests under `coding-spec/scripts/`.
 - CI (`.github/workflows/ci.yml`) runs the toolkit tests, the skill parser tests, and the spec gate on every push and PR.

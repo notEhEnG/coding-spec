@@ -1,7 +1,7 @@
 ---
 name: coding-spec
-description: Spec-first development toolkit and auditor. Scaffold a workspace, draft a feature spec, turn it into a technical plan, gate specs for completeness, and export an agent brief — then audit an implementation for drift against its spec. Use when the user wants to plan a feature before coding, generate/validate a spec, review an implementation, or check whether a feature is actually done.
-when_to_use: Trigger phrases include "start a spec", "scaffold a spec", "write a spec for X", "turn this spec into a plan", "validate my spec", "is this spec complete", "export this spec for an agent", "add a CI spec gate", plus the audit phrases "check spec drift", "are we on track", "validate my implementation against the spec", "is feature X done", and "generate a spec from the code".
+description: Spec-first development toolkit and auditor. Scaffold a workspace, draft a feature spec, turn it into a technical plan, gate specs for completeness, export an agent brief, score spec-to-code health, and catalog every spec — then audit an implementation for drift against its spec. Use when the user wants to plan a feature before coding, generate/validate a spec, review or grade an implementation, or check whether a feature is actually done.
+when_to_use: Trigger phrases include "start a spec", "scaffold a spec", "write a spec for X", "turn this spec into a plan", "validate my spec", "is this spec complete", "export this spec for an agent", "score this feature", "catalog our specs", "add a CI spec gate", plus the audit phrases "check spec drift", "are we on track", "validate my implementation against the spec", "is feature X done", and "generate a spec from the code".
 argument-hint: "<command | spec-path | audit mode> [args]"
 arguments: [target]
 disable-model-invocation: false
@@ -41,7 +41,7 @@ Read the first whitespace-delimited token of `$target`:
 ### A. Toolkit commands → run the CLI
 
 If the first token is one of `init`, `spec`, `plan`, `validate`, `review`,
-`export`, `ci`, run the CLI and report its output:
+`export`, `ci`, `score`, `catalog`, run the CLI and report its output:
 
 ```bash
 $CS <token> <remaining-args>
@@ -56,6 +56,8 @@ $CS <token> <remaining-args>
 | `/coding-spec plan docs/specs/<slug>.md` | Generate a technical plan. |
 | `/coding-spec review docs/specs/<slug>.md` | Checklist matching criteria to code evidence. |
 | `/coding-spec export docs/specs/<slug>.md --format claude` | Bundle an agent brief (`markdown`/`claude`/`cursor`/`agents`). |
+| `/coding-spec score docs/specs/<slug>.md` | Grade spec-to-code health (A–F). |
+| `/coding-spec catalog` | Index every spec with status + grade. |
 | `/coding-spec ci` | Generate a GitHub Actions spec-gate workflow. |
 
 After running, surface the CLI's printed output and the path(s) it wrote. If the
@@ -94,12 +96,13 @@ actions.
 /coding-spec plan docs/specs/add-team-billing.md
 # …implement…
 /coding-spec review docs/specs/add-team-billing.md
+/coding-spec score docs/specs/add-team-billing.md
 /coding-spec audit docs/specs/add-team-billing.md
 ```
 
 ## Scope guard
 
-The `validate` and `review` outputs are heuristic aids for
+The `validate`, `review`, `score`, and `catalog` outputs are heuristic aids for
 human judgement, not proofs of correctness. The auditor never upgrades an item to
 **Aligned** on a weak signal (a filename alone), and escalates ambiguous or
 non-functional requirements to **Needs Review**.

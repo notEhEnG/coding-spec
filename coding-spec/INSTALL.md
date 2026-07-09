@@ -2,7 +2,7 @@
 
 This package uses the portable `SKILL.md` format so the same skill can be reused across agent tools that support it.
 
-> **Want the full toolkit too?** This subfolder is the standalone **drift auditor**. To get `/coding-spec` driving the whole toolkit (`init`, `spec`, `plan`, `validate`, `review`, `export`, `ci`) *and* the auditor, install the **whole repository** as a skill instead — see the root [`README.md`](../README.md#use-it-as-an-agent-skill-coding-spec) or run `./install.sh`. Copy just this subfolder only if you want the auditor and nothing else.
+> **Want the full toolkit too?** This subfolder is the standalone **drift auditor**. To get `/coding-spec` driving the whole toolkit (`init`, `spec`, `plan`, `validate`, `review`, `export`, `ci`, `score`, `catalog`) *and* the auditor, install the **whole repository** as a skill instead — see the root [`README.md`](../README.md#use-it-as-an-agent-skill-coding-spec) or run `./install.sh`. Copy just this subfolder only if you want the auditor and nothing else.
 
 ## Before you install
 
