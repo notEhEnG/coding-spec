@@ -1,0 +1,30 @@
+# CI for the coding-spec toolkit itself: run the test suite and gate the
+# repository's own specs with the spec-completeness check.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test deps
+        run: pip install pytest
+      - name: Run toolkit tests
+        run: python3 -m pytest tests/ -q
+      - name: Skill parser tests
+        run: cd coding-spec && python3 -m unittest scripts/test_spec_parse.py -q
+      - name: Validate specs (non-blocking until specs exist)
+        run: |
+          if [ -d docs/specs ] && ls docs/specs/*.md >/dev/null 2>&1; then
+            ./bin/coding-spec validate --all
+          else
+            echo "No specs under docs/specs yet; skipping spec gate."
+          fi

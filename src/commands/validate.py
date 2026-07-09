@@ -18,12 +18,9 @@ HEADING_RE = re.compile(r"^#+\s+")
 LIST_ITEM_RE = re.compile(r"^(?:[-*]|\d+\.)\s+")
 
 
-def run_validate(spec_file_path: str) -> int:
-    spec_path = Path(spec_file_path).resolve()
-    if not spec_path.is_file():
-        print(f"Error: spec file not found: {spec_path}", file=sys.stderr)
-        return 1
-
+def check_spec(spec_path: Path) -> tuple[list[str], list[str]]:
+    """Return (errors, warnings) for a single spec file. Shared by the single-file
+    and --all validation paths so both apply exactly the same rules."""
     has_acceptance = False
     acceptance_items = 0
     has_non_goals = False
@@ -64,6 +61,17 @@ def run_validate(spec_file_path: str) -> int:
     if not has_non_goals:
         warnings.append("Missing 'Non-Goals / Out of Scope' section; defining scope prevents drift.")
 
+    return errors, warnings
+
+
+def run_validate(spec_file_path: str) -> int:
+    spec_path = Path(spec_file_path).resolve()
+    if not spec_path.is_file():
+        print(f"Error: spec file not found: {spec_path}", file=sys.stderr)
+        return 1
+
+    errors, warnings = check_spec(spec_path)
+
     print(f"Validating spec file: {spec_path}")
     print(f"  Found {len(errors)} error(s), {len(warnings)} warning(s).")
     for message in errors:
@@ -75,5 +83,40 @@ def run_validate(spec_file_path: str) -> int:
         print("Validation FAILED.")
         return 1
 
+    print("Validation PASSED.")
+    return 0
+
+
+def run_validate_all(target_dir_path: str | None) -> int:
+    """Validate every spec under docs/specs. Returns non-zero if any spec has
+    errors, so it can serve as a single required CI check for a whole repo."""
+    target_dir = Path(target_dir_path or ".").resolve()
+    specs_dir = target_dir / "docs" / "specs"
+    if not specs_dir.is_dir():
+        print(f"Error: no specs directory found at '{specs_dir}'. Run `coding-spec init` first.", file=sys.stderr)
+        return 1
+
+    spec_files = sorted(specs_dir.glob("*.md"))
+    if not spec_files:
+        print(f"No specs found under '{specs_dir}'. Nothing to validate.")
+        return 0
+
+    failed = 0
+    total_warnings = 0
+    print(f"Validating {len(spec_files)} spec(s) under '{specs_dir}':")
+    for spec_path in spec_files:
+        errors, warnings = check_spec(spec_path)
+        total_warnings += len(warnings)
+        status = "FAIL" if errors else "PASS"
+        if errors:
+            failed += 1
+        print(f"  [{status}] {spec_path.name} — {len(errors)} error(s), {len(warnings)} warning(s)")
+        for message in errors:
+            print(f"      [ERROR] {message}")
+
+    print(f"Summary: {len(spec_files) - failed}/{len(spec_files)} passed, {total_warnings} warning(s).")
+    if failed:
+        print("Validation FAILED.")
+        return 1
     print("Validation PASSED.")
     return 0
